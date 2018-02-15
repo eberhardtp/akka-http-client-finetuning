@@ -26,7 +26,8 @@ object Main extends App {
     implicit val materializer = ActorMaterializer()
 
     val routes: Route = {
-      onComplete(Future(Thread.sleep(200))) {
+      val sleep = akka.pattern.after(300 milliseconds, system.scheduler)(Future(Unit))
+      onComplete(sleep) {
         case _ => complete(StatusCodes.OK)
       }
     }
@@ -57,30 +58,30 @@ object Main extends App {
 
     Await.result(g1, timeout)
 
-    println("========= 10 Http")
-    val flow1 = Flow[Int].mapAsyncUnordered(10)(x => Http().singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")))
+    println("========= 2 Http")
+    val flow1 = Flow[Int].mapAsyncUnordered(2)(x => Http().singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")))
     val g2 = source.via(flow1).runWith(Sink.ignore)
 
     Await.result(g2, timeout)
 
-    println("========= 800 Http")
+    println("========= 8 Http")
 
-    val flow2 = Flow[Int].mapAsyncUnordered(800)(x => Http().singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")))
+    val flow2 = Flow[Int].mapAsyncUnordered(8)(x => Http().singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")))
     val g3 = source.via(flow2).runWith(Sink.ignore)
 
     Await.result(g3, timeout)
 
-    println("========= 800 Cached Http")
+    println("========= 8 Cached Http")
 
     val http = Http()
-    val flow3 = Flow[Int].mapAsyncUnordered(800)(x => http.singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")))
+    val flow3 = Flow[Int].mapAsyncUnordered(8)(x => http.singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")))
     val g4 = source.via(flow3).runWith(Sink.ignore)
 
     Await.result(g4, timeout)
 
-    println("========= 800 Cached Http Consumed")
+    println("========= 8 Cached Http Consumed")
 
-    val flow4 = Flow[Int].mapAsyncUnordered(800)(x => http.singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")).map(resp => resp.discardEntityBytes(materializer)))
+    val flow4 = Flow[Int].mapAsyncUnordered(8)(x => http.singleRequest(HttpRequest(uri = "http://0.0.0.0:9000/")).map(resp => resp.discardEntityBytes(materializer)))
     val g5 = source.via(flow4).runWith(Sink.ignore)
 
     Await.result(g5, timeout)
